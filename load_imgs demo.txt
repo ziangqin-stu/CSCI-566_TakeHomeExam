@@ -1,0 +1,32 @@
+import numpy as np
+import struct
+
+mnist_path  = "./"
+img_path = mnist_path + "train-images.idx3-ubyte"
+lbl_path = mnist_path + "train-labels.idx1-ubyte" 
+
+def img_read(file_name, saveFlag, status):
+    ## read bin-file
+    f = open(file_name, 'rb')
+    buff = f.read();
+    f.close()
+    
+    offset = 0
+    magic, imageNum, rows, cols = struct.unpack_from('>IIII', buff, offset)
+    offset += struct.calcsize('>IIII')
+    images = np.empty((imageNum,rows, cols))
+    image_size = rows * cols
+    fmt = '>' + str(image_size) + 'B'
+
+    for i in range(imageNum):
+        images[i] = np.array(struct.unpack_from(fmt, buf, offset)).reshape((rows,cols))
+        if saveFlag == True:
+        #±£´æÍ¼Ïñ
+            im = Image.fromarray(np.uint8(images[i]))
+            im.save(status + str(i) + '.png')
+        offset += struct.calcsize(fmt)
+
+    return images
+
+img_set = img_read(img_path, False, "raw")
+plt.imshow(img_set[0], cmap="Greys")
