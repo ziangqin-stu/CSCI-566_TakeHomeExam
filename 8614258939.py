@@ -19,7 +19,7 @@ class MNIST:
         ## processed data
         [self._train_imgs, self._test_imgs, self._train_lables, self._test_lables] = \
             self.split_raw_data()
-        [self._transformed_trian_imgs, self._transformed_test_imgs] = self.pca_transform(self._D)
+        [self._transformed_trian_imgs, self._transformed_test_imgs] = self.pca_transform()
 
     def load_imgs(self, file_name):
         ## read bin-file
@@ -38,7 +38,7 @@ class MNIST:
             images[i] = np.array(struct.unpack_from(fmt, buff, offset))  ## .reshape(rows,cols)
             offset += struct.calcsize(fmt)
         ## return img list
-        return np.array(images[:self._Num])
+        return np.array(images[:self._Num], dtype=int)
 
     def lable_read(self, file_name):
         ## read bin-file
@@ -56,7 +56,7 @@ class MNIST:
             lables[i] = np.array(struct.unpack_from(fmt, buff, offset))
             offset += struct.calcsize(fmt)
         ## return
-        return np.array([int(e) for e in lables][:self._Num])
+        return np.array([int(e) for e in lables][:self._Num], dtype=int)
 
     def split_raw_data(self):
         # return [self._imgs[self._N : ], self._imgs[ : self._N],
@@ -64,9 +64,9 @@ class MNIST:
         return [self._imgs[int(self._N):], self._imgs[: int(self._N)],
                 self._lables[int(self._N):], self._lables[: int(self._N)]]
 
-    def pca_transform(self, D):
+    def pca_transform(self):
         from sklearn.decomposition import PCA
-        pca = PCA(n_components=D, svd_solver='full')
+        pca = PCA(n_components=self._D, svd_solver='full')
         pca.fit(self._train_imgs)
         return [pca.transform(self._train_imgs), pca.transform(self._test_imgs)]
 
@@ -101,9 +101,8 @@ class KNN:
 
     def predict(self, print_acc):
         ## find neighbors
-        dist = [[np.sqrt(np.sum(np.square(train_img[index] - test_point))) for index in range(980)] for test_point in
-                test_img]
-        neighbors = [np.argsort(dist_line)[: self._K] for dist_line in dist]
+        dist = [[np.sqrt(np.sum(np.square(train_img[index] - test_point))) for index in range(self._Num - self._N)] for test_point in test_img]
+        neighbors = [np.argsort(dist_line)[ : self._K] for dist_line in dist]
         ## vote
         votes = np.zeros([self._N, 10])
         for i in range(self._N):
@@ -120,23 +119,28 @@ class KNN:
             print("acc={}".format(acc) + "(" + "{}/{}".format(correction, self._N) + ")")
         for i in range(self._N):
             print("{} {}".format(votes[i], test_lable[i]))
+        res = [[votes[i], test_lable[i]] for i in range(self._N)]
+        np.savetxt("8614258939.txt", res, fmt="%d %d");
 
 
 """
 --- main ---
 """
-
 import sys
 
 argv = sys.argv
-K = argv[1]
-D = argv[2]
-N = argv[3]
+K = int(argv[1])
+D = int(argv[2])
+N = int(argv[3])
 mnist_path = argv[4] + "/"
+# D = argv[3]
+# N = argv[4]
+# K = argv[2]
+# mnist_path = argv[5] + "/"
 
 img_path = mnist_path + "train-images.idx3-ubyte"
 lbl_path = mnist_path + "train-labels.idx1-ubyte"
 mnist = MNIST(img_path, lbl_path, D, N)
 [train_img, test_img, train_lable, test_lable] = mnist.get_transformed_data()
 knn = KNN(train_img, test_img, train_lable, test_lable, K, N)
-knn.predict(False)
+knn.predict(True)
