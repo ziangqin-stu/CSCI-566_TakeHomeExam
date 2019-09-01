@@ -1,6 +1,7 @@
 import numpy as np
 import struct
 import sys
+import os
 # import time
 
 class MNIST:
@@ -141,10 +142,12 @@ argv = sys.argv
 K = int(argv[1])
 D = int(argv[2])
 N = int(argv[3])
-mnist_path = argv[4] + "/"
+mnist_path = argv[4]
 
-img_path = mnist_path + "train-images.idx3-ubyte"
-lbl_path = mnist_path + "train-labels.idx1-ubyte"
+# img_path = mnist_path + "train-images.idx3-ubyte"
+# lbl_path = mnist_path + "train-labels.idx1-ubyte"
+img_path = os.path.join(mnist_path, "train-images.idx3-ubyte")
+lbl_path = os.path.join(mnist_path, "train-labels.idx1-ubyte")
 mnist = MNIST(img_path, lbl_path, D, N)
 [train_img, test_img, train_lable, test_lable] = mnist.get_transformed_data()
 knn = KNN(train_img, test_img, train_lable, test_lable, K, N)
