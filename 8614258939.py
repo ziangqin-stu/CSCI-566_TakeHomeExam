@@ -1,5 +1,7 @@
 import numpy as np
 import struct
+import sys
+# import time
 
 class MNIST:
     """
@@ -24,17 +26,17 @@ class MNIST:
     def load_imgs(self, file_name):
         ## read bin-file
         f = open(file_name, 'rb')
-        buff = f.read();
+        buff = f.read(16 + 784 * self._Num);
         f.close()
         ## load headers & prepare struct
         offset = 0
         magic, imageNum, rows, cols = struct.unpack_from('>IIII', buff, offset)
         offset += struct.calcsize('>IIII')
-        images = np.empty((imageNum, rows * cols))
+        images = np.empty((self._Num, rows * cols))
         image_size = rows * cols
         fmt = '>' + str(image_size) + 'B'
         ## load imgs
-        for i in range(imageNum):
+        for i in range(self._Num):
             images[i] = np.array(struct.unpack_from(fmt, buff, offset))  ## .reshape(rows,cols)
             offset += struct.calcsize(fmt)
         ## return img list
@@ -43,16 +45,16 @@ class MNIST:
     def lable_read(self, file_name):
         ## read bin-file
         f = open(file_name, 'rb')
-        buff = f.read();
+        buff = f.read(8 + 1 * self._Num)
         f.close()
         ## load headers & prepare struct
         offset = 0
         magic, lableNum = struct.unpack_from('>II', buff, offset)
         offset += struct.calcsize('>II')
-        lables = np.empty((lableNum))
+        lables = np.empty(self._Num)
         fmt = '>' + str(1) + 'B'
         ## load lables
-        for i in range(lableNum):
+        for i in range(self._Num):
             lables[i] = np.array(struct.unpack_from(fmt, buff, offset))
             offset += struct.calcsize(fmt)
         ## return
@@ -99,7 +101,7 @@ class KNN:
     def train():
         return
 
-    def predict(self, print_acc):
+    def predict(self, print_acc, print_res):
         ## find neighbors
         dist = [[np.sqrt(np.sum(np.square(train_img[index] - test_point))) for index in range(self._Num - self._N)] for test_point in test_img]
         neighbors = [np.argsort(dist_line)[ : self._K] for dist_line in dist]
@@ -110,37 +112,43 @@ class KNN:
                 neighbor_ind = neighbors[i][j]
                 lable = train_lable[neighbor_ind]
                 votes[i][lable] = votes[i][lable] + (1 / dist[i][neighbor_ind])
-                # print("i={}, neighbor_ind={}, lable={}, addition={}".format(i, neighbor_ind, lable, (1 / dist[i][neighbor_ind])))
         votes = np.array([np.argsort(votes_line)[-1] for votes_line in votes])
         ## calculate accuracy
         correction = sum(votes == test_lable)
         acc = correction / self._N
-        if print_acc:
-            print("acc={}".format(acc) + "(" + "{}/{}".format(correction, self._N) + ")")
-        for i in range(self._N):
-            print("{} {}".format(votes[i], test_lable[i]))
         res = [[votes[i], test_lable[i]] for i in range(self._N)]
         np.savetxt("8614258939.txt", res, fmt="%d %d");
+        if print_acc:
+            print("_> acc={}".format(acc) + "(" + "{}/{}".format(correction, self._N) + ")")
+            print("_> error:")
+            for i in range(len(res)):
+                pair = res[i]
+                if pair[0] != pair[1]:
+                    print("    {}: {}-{}".format(i, pair[0], pair[1]))
+        if print_res:
+            print("--- res ---")
+            for i in range(self._N):
+                print("    {} {}".format(votes[i], test_lable[i]))
+
 
 
 """
 --- main ---
 """
-import sys
+# start = time.clock()
 
 argv = sys.argv
 K = int(argv[1])
 D = int(argv[2])
 N = int(argv[3])
 mnist_path = argv[4] + "/"
-# D = argv[3]
-# N = argv[4]
-# K = argv[2]
-# mnist_path = argv[5] + "/"
 
 img_path = mnist_path + "train-images.idx3-ubyte"
 lbl_path = mnist_path + "train-labels.idx1-ubyte"
 mnist = MNIST(img_path, lbl_path, D, N)
 [train_img, test_img, train_lable, test_lable] = mnist.get_transformed_data()
 knn = KNN(train_img, test_img, train_lable, test_lable, K, N)
-knn.predict(True)
+knn.predict(print_acc=True, print_res=False)
+
+# end = time.clock()
+# print("time consume: {}".format(end - start))
